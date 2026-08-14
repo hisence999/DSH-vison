@@ -38,14 +38,7 @@ A host-composition plugin mounted through the profile patch layer: runs in **eve
 
 3. Restart DSH (or wait for the patch-layer HMR).
 
-Config fields (all optional, under `config:`):
-
-| Field | Default | Meaning |
-| --- | --- | --- |
-| `enabled` | `true` | Master switch |
-| `patchAdmission` | `true` | Let text-only models accept images (and pass the `read_image` gate) |
-| `provider` / `model` | empty = auto-detect | Pin the vision model used to describe images |
-| `prompt` | see source | Prompt used to describe an image |
+After installing, open **"Settings → 图片理解"** for a visual config page (switches, vision model, prompt); changes apply immediately. The config persists in the settings namespace `dsh-image-vision` (also editable in `settings.yaml`); the `config` in `cordis.patch.yml` is only a fallback when settings is unavailable.
 
 ### Method 2: preset form (persistent, per selected preset)
 

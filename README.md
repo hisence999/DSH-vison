@@ -38,14 +38,7 @@
 
 3. 重启 DSH（或等补丁层 HMR 热重载）。
 
-配置项（写在 `config:` 里，均可省略）：
-
-| 字段 | 默认 | 说明 |
-| --- | --- | --- |
-| `enabled` | `true` | 总开关 |
-| `patchAdmission` | `true` | 放行纯文本模型发图（及 `read_image` 门禁） |
-| `provider` / `model` | 空 = 自动探测 | 手动指定识别图片的多模态模型 |
-| `prompt` | 见源码 | 描述图片用的提示词 |
+装好后，打开 **「设置 → 图片理解」** 即可可视化配置（开关、识别模型、提示词），保存后立即生效。配置持久化在 settings 命名空间 `dsh-image-vision`（也可直接编辑 `settings.yaml`）；`cordis.patch.yml` 里的 `config` 仅作 settings 不可用时的兜底。
 
 ### 方式二：预设形式（持久化，仅选中该预设的会话生效）
 

@@ -11,7 +11,11 @@
  *  - listens to tools/post-execute and replaces read_image's image block with
  *    that description before it is committed to session history.
  *
- * Config (row `config` in cordis.patch.yml):
+ * Config: registered as the durable settings namespace `dsh-image-vision`
+ * (editable in the DSH settings UI under "图片理解", or in settings.yaml).
+ * The row `config` in cordis.patch.yml is only a fallback when the settings
+ * service is unavailable.
+ *
  *   enabled:        boolean  master switch (default true)
  *   patchAdmission: boolean  wrap resolveModelInfo to admit images for
  *                   text-only models (default true)
@@ -20,8 +24,19 @@
  *   prompt:         string   prompt used to describe an image.
  */
 
+const z = require('@deepseek-ai/schemastery')
+
 const DEFAULT_PROMPT =
   '请仔细观察这张图片并详细描述其内容，包括：所有可见的文字（请逐字转录）、物体、人物、场景、布局、颜色以及任何值得注意的细节。请用中文回答。'
+
+const SETTINGS_NS = 'dsh-image-vision'
+const configSchema = z.object({
+  enabled: z.boolean().default(true),
+  patchAdmission: z.boolean().default(true),
+  provider: z.string().default(''),
+  model: z.string().default(''),
+  prompt: z.string().default(DEFAULT_PROMPT),
+})
 
 module.exports = {
   name: 'dsh-image-vision',
@@ -29,17 +44,38 @@ module.exports = {
   apply(ctx, config = {}) {
     const llm = ctx.llm
     const agentDefaultModel = ctx.get('agentDefaultModel')
+    const settings = ctx.get('settings')
 
-    const cfg = {
-      enabled: config.enabled !== false,
-      patchAdmission: config.patchAdmission !== false,
-      provider: typeof config.provider === 'string' ? config.provider : '',
-      model: typeof config.model === 'string' ? config.model : '',
-      prompt:
-        typeof config.prompt === 'string' && config.prompt.length > 0
-          ? config.prompt
-          : DEFAULT_PROMPT,
+    // 持久化配置：注册 settings 命名空间（设置页 / settings.yaml 可编辑）。
+    if (settings) {
+      try {
+        settings.register(SETTINGS_NS, configSchema)
+      } catch (e) {
+        console.error('[imgvis] settings 命名空间注册失败:', e)
+      }
     }
+
+    function currentConfig() {
+      if (settings) {
+        try {
+          const value = settings.get(SETTINGS_NS)
+          if (value !== undefined) return value
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      return {
+        enabled: config.enabled !== false,
+        patchAdmission: config.patchAdmission !== false,
+        provider: typeof config.provider === 'string' ? config.provider : '',
+        model: typeof config.model === 'string' ? config.model : '',
+        prompt:
+          typeof config.prompt === 'string' && config.prompt.length > 0
+            ? config.prompt
+            : DEFAULT_PROMPT,
+      }
+    }
+    let cfg = currentConfig()
 
     // Keep the original resolveModelInfo for real-capability checks and restore.
     const originalResolveModelInfo =
@@ -77,6 +113,18 @@ module.exports = {
       admissionPatched = false
     }
     if (cfg.patchAdmission) patchAdmission()
+
+    // 设置页保存后立即生效（含 patchAdmission 的开关切换）。
+    const offSettingsUpdated = settings
+      ? ctx.on('settings/updated', (ns) => {
+          if (ns !== SETTINGS_NS) return
+          const next = currentConfig()
+          const prevPatch = cfg.patchAdmission
+          cfg = next
+          if (next.patchAdmission && !prevPatch) patchAdmission()
+          else if (!next.patchAdmission && prevPatch) unpatchAdmission()
+        })
+      : () => {}
 
     const descriptions = new Map()
     const modelByAgent = new Map()
@@ -273,6 +321,7 @@ module.exports = {
       offRequest()
       offPreStep()
       offPostExecute()
+      offSettingsUpdated()
       unpatchAdmission()
     }
   },
