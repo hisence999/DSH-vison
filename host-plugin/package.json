@@ -1,0 +1,8 @@
+{
+  "name": "dsh-image-vision",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "index.js",
+  "description": "DSH host plugin: give text-only models image understanding by describing images with a vision-capable model."
+}
