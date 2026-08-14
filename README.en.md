@@ -1,6 +1,6 @@
 # DSH Vision · Image Understanding Plugin
 
-[中文](README.zh-CN.md) · [Home](README.md)
+[中文](README.md)
 
 Give **text-only models** the ability to "see" images: you can always send images, and when the active model does not support images, the plugin transparently replaces the image with a **text description** produced by a vision-capable model.
 
