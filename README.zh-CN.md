@@ -20,9 +20,29 @@
 
 ## 安装
 
-> 仓库包含两种形态：`src/` 是**动态插件源码**（完整功能，含设置页）；`preset/` 是**持久化预设版**（仅 Host、自动探测识别模型）。任选其一。
+### 方式一：一键命令安装（推荐，持久化预设）
 
-### 方式 A：动态插件（完整功能，含设置页）
+**Windows PowerShell**（一行命令）：
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+```
+
+**macOS / Linux**（一行命令）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+```
+
+装完后，在 DSH 新建会话时选择名为 **「DSH Vision」** 的预设即可。识别模型会**自动探测**第一个支持图片的模型，无需配置。
+
+### 方式二：手动复制预设（等价于方式一的手动版）
+
+1. 把 `preset/` 目录复制为：`${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`（Windows 通常是 `C:\Users\<你>\.dsh\.agent-presets\dsh-vision`）。
+2. 在 DSH 新建会话时选择 **「DSH Vision」** 预设。
+3. 如需手动指定识别模型，编辑 `preset/plugin.mjs` 里的 `config.provider` / `config.model`。
+
+### 方式三：动态插件（完整功能，含设置页）
 
 需要你在 DSH 里具备「动态 Cordis 插件」能力（即 `cordis` 预设 / cordis_* 工具）。
 
@@ -35,12 +55,6 @@
 
 > 注意：动态插件是**进程内临时对象**，DSH 重启后会失效，需要重新粘贴运行。
 
-### 方式 B：持久化预设（免设置页，推荐日常使用）
-
-1. 把 `preset/` 目录复制为：`${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`（Windows 通常是 `C:\Users\<你>\.dsh\.agent-presets\dsh-vision`）。
-2. 在 DSH 新建会话时选择名为 **「DSH Vision」** 的预设（或把该预设挂到你的会话上）。
-3. 无需配置：识别模型会**自动探测**第一个声明支持图片的模型；如想手动指定，编辑 `preset/plugin.mjs` 里 `config.provider` / `config.model`。
-
 ## 配置
 
 | 字段 | 默认 | 说明 |
@@ -52,7 +66,7 @@
 
 ## 限制与说明
 
-- **需要 DSH 里至少已配置一个支持图片的模型**，否则无法生成描述（设置页会显示「当前生效的识别模型」为空）。
+- **需要 DSH 里至少已配置一个支持图片的模型**，否则无法生成描述。
 - 识别描述会**按图片内容哈希（attachmentId）缓存**，同一张图只识别一次。
 - `patchAdmission` 是对共享 `llm` 服务的一次**可逆包装**，停止/更新插件时会还原；它可能让个别界面把纯文本模型显示为“支持图片”（仅展示层面，不影响真实调用）。
 - 会话中途切换模型后的**第一步**可能仍按旧模型判定（存在 1 步滞后）。

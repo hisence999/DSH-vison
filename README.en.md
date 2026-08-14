@@ -20,9 +20,29 @@ Give **text-only models** the ability to "see" images: you can always send image
 
 ## Install
 
-> The repo ships two forms: `src/` is the **dynamic plugin source** (full features, with a settings page); `preset/` is a **persistent preset** (Host only, auto-detects the vision model). Pick one.
+### Method 1: one-line install (recommended, persistent preset)
 
-### Method A: dynamic plugin (full features, with settings page)
+**Windows PowerShell** (one line):
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+```
+
+**macOS / Linux** (one line):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+```
+
+Then start a new DSH session and pick the **"DSH Vision"** preset. The vision model is auto-detected (the first image-capable model), so no configuration is needed.
+
+### Method 2: copy the preset manually (same as Method 1, by hand)
+
+1. Copy the `preset/` folder to `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/` (on Windows, usually `C:\Users\<you>\.dsh\.agent-presets\dsh-vision`).
+2. Start a new session with the **"DSH Vision"** preset.
+3. To pin a vision model, edit `config.provider` / `config.model` in `preset/plugin.mjs`.
+
+### Method 3: dynamic plugin (full features, with settings page)
 
 Requires the DSH "dynamic Cordis plugin" capability (`cordis` preset / cordis_* tools).
 
@@ -35,12 +55,6 @@ Requires the DSH "dynamic Cordis plugin" capability (`cordis` preset / cordis_* 
 
 > Note: a dynamic plugin is process-local and disappears after a DSH restart.
 
-### Method B: persistent preset (no settings page, recommended)
-
-1. Copy the `preset/` folder to `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/` (on Windows, usually `C:\Users\<you>\.dsh\.agent-presets\dsh-vision`).
-2. Start a new session with the **"DSH Vision"** preset (or mount it onto your session).
-3. No configuration needed: the vision model is auto-detected (the first model that declares image input). To pin one, edit `config.provider` / `config.model` in `preset/plugin.mjs`.
-
 ## Configuration
 
 | Field | Default | Meaning |
@@ -52,7 +66,7 @@ Requires the DSH "dynamic Cordis plugin" capability (`cordis` preset / cordis_* 
 
 ## Caveats
 
-- **At least one image-capable model must be configured in your DSH**, otherwise no description can be generated (the settings page shows "current model" as empty).
+- **At least one image-capable model must be configured in your DSH**, otherwise no description can be generated.
 - Descriptions are **cached by image content hash (attachmentId)** — the same image is described only once.
 - `patchAdmission` is a **reversible wrapper** around the shared `llm` service; it is restored when the plugin stops/updates. It may make some UIs display a text-only model as "image-capable" (display-only, no effect on real calls).
 - The **first step after switching models mid-session** may still use the old model's capability (a 1-step lag).
