@@ -54,7 +54,7 @@ patch_apiproxy() {
   fi
   awk '
     /"web-search-deepseek"/ && !done {
-      print "\t\"" $0 "\","
+      print "\t" $0 ","
       print "\t// dsh-image-vision: settings section for the DSH-vison plugin (added by DSH-vison installer)"
       print "\t\"dsh-image-vision\""
       done = 1

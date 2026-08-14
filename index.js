@@ -378,15 +378,19 @@ module.exports = {
       const cur = currentModel(agent)
       if (cur && (await supportsImage(cur.provider, cur.model))) return decision
 
-      // 新回合清空上一回合遗留的待替换记录（如被中止的回合）。
+      const sessionId = String(agent && agent.session && agent.session.id)
+      const sessionPrefix = sessionId + ':'
+      // 新回合清空上一回合遗留的待替换记录（如被中止的回合），只清本会话的条目
+      // （并发多会话时不能全局 clear，否则另一个会话刚算好的描述会被误删）。
       const agentId = String(agent && agent.id)
       const turn = payload.turn
       if (lastTurns.get(agentId) !== turn) {
         lastTurns.set(agentId, turn)
-        pendingReplacements.clear()
+        for (const k of pendingReplacements.keys()) {
+          if (k.startsWith(sessionPrefix)) pendingReplacements.delete(k)
+        }
       }
 
-      const sessionId = String(agent && agent.session && agent.session.id)
       const memo = new Map()
       for (const m of decision.messages || []) {
         if (!m || !Array.isArray(m.content) || !hasImageBlock(m.content)) continue
