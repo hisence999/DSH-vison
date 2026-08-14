@@ -16,6 +16,7 @@ Give **text-only models** the ability to "see" images: you can always send image
 - Wraps `llm.resolveModelInfo`: makes the "send admission / tool gate" accept images for text-only models (can be disabled).
 - Listens to `agent/pre-step`: replaces image blocks (including those nested in tool results) with description text before the request is frozen.
 - Listens to `tools/post-execute`: replaces `read_image`'s image block with description text before it is committed.
+- Listens to `system-prompt/assemble`: captures the model actually in effect for the current step (including the in-session UI selection), so multimodal detection has **zero lag**.
 - Real multimodal detection uses the **original (pre-wrap) method**.
 
 ## Install
@@ -72,7 +73,6 @@ The installer adds the namespace to that allowlist idempotently. **Upgrading/rei
 - **At least one image-capable model must be configured in your DSH**, otherwise no description can be generated.
 - **Descriptions are not cached**: every image send triggers a fresh vision call (the same image appearing twice in one step is described only once per step, to avoid double billing).
 - `patchAdmission` is a **reversible wrapper** around the shared `llm` service; it is restored on stop/update. It may make some UIs display a text-only model as "image-capable" (display-only).
-- The **first step after switching models mid-session** may still use the old model's capability (a 1-step lag).
 
 ## Security
 

@@ -191,11 +191,24 @@ module.exports = {
       return text
     }
 
+    // 模型判定优先级（从新到旧）：
+    //   1) modelByAgent 缓存：由 system-prompt/assemble 与 agent/request 捕获的
+    //      “本次/最近一次请求实际使用的模型”（含会话里 UI 选择的模型，零滞后）；
+    //   2) agent.session.requestHeader()：会话最近一次请求头；
+    //   3) agent.options：代理级配置；
+    //   4) agentDefaultModel：全局默认模型。
     function currentModel(agent) {
-      const opts = agent && agent.options
-      if (opts && opts.provider && opts.model) return { provider: opts.provider, model: opts.model }
       const cached = modelByAgent.get(String(agent && agent.id))
       if (cached) return cached
+      try {
+        const hdr = agent && agent.session && agent.session.requestHeader()
+        const cfg = hdr && hdr.config
+        if (cfg && cfg.provider && cfg.model) return { provider: cfg.provider, model: cfg.model }
+      } catch (e) {
+        /* ignore */
+      }
+      const opts = agent && agent.options
+      if (opts && opts.provider && opts.model) return { provider: opts.provider, model: opts.model }
       try {
         const d = agentDefaultModel ? agentDefaultModel.currentSelection() : undefined
         if (d && d.provider && d.model) return { provider: d.provider, model: d.model }
@@ -244,6 +257,22 @@ module.exports = {
       }
       return { blocks: out, changed }
     }
+
+    // 每次 prompt 组装都会在 agent/pre-step 之前执行；这里捕获最终生效的
+    // 模型（含用户在会话 UI 中的选择），让 pre-step 的多模态判定零滞后。
+    const offAssemble = ctx.on('system-prompt/assemble', async (assembly, context, next) => {
+      const result = await next()
+      try {
+        const vars = result && result.variables
+        const agent = context && context.agent
+        if (vars && vars.provider && vars.model && agent) {
+          modelByAgent.set(String(agent.id), { provider: vars.provider, model: vars.model })
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      return result
+    })
 
     const offRequest = ctx.on('agent/request', async (payload, next) => {
       const requestConfig = await next()
@@ -320,6 +349,7 @@ module.exports = {
     })
 
     return () => {
+      offAssemble()
       offRequest()
       offPreStep()
       offPostExecute()
