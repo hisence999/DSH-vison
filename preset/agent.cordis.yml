@@ -1,0 +1,4 @@
+# DSH Vision 预设组合 / preset composition
+# 该行通过相对路径引用同目录下的 plugin.mjs（仅 Host，无设置页）。
+- id: image-vision
+  name: ./plugin.mjs
