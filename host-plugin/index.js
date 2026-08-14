@@ -25,9 +25,9 @@ const DEFAULT_PROMPT =
 
 module.exports = {
   name: 'dsh-image-vision',
+  inject: ['llm'],
   apply(ctx, config = {}) {
-    const llm = ctx.get('llm')
-    if (llm === undefined) return
+    const llm = ctx.llm
     const agentDefaultModel = ctx.get('agentDefaultModel')
 
     const cfg = {
