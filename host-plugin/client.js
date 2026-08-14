@@ -114,7 +114,13 @@ window.__ModuleLoader__.load({
           return React.createElement('div', { style: { fontSize: 13, opacity: 0.6 } }, '加载中…');
         }
 
-        const providers = meta.providers || [];
+        // 只列出当前已配置（active）的供应商；若已保存的供应商已停用，仍保留该选项以免状态丢失。
+        const allProviders = meta.providers || [];
+        const providers = allProviders.filter((p) => p.active);
+        const savedProvider = draft.provider && !providers.some((p) => p.provider === draft.provider)
+          ? allProviders.find((p) => p.provider === draft.provider) || null
+          : null;
+        const providerOptions = savedProvider ? [savedProvider].concat(providers) : providers;
         const selectedGroup = (meta.groups || []).find((g) => g.id === draft.provider);
         const models = selectedGroup ? selectedGroup.models : [];
 
@@ -134,7 +140,7 @@ window.__ModuleLoader__.load({
           React.createElement(Field, { label: '识别图片的模型', hint: '留空 = 自动探测第一个支持图片的模型；手动选择时请选择支持图片的模型' },
             React.createElement('select', { value: draft.provider, style: selStyle, onChange: (e) => setDraft(Object.assign({}, draft, { provider: e.target.value, model: '' })) },
               React.createElement('option', { value: '' }, '自动检测'),
-              providers.map((p) => React.createElement('option', { key: p.provider, value: p.provider }, p.displayName + ' (' + p.provider + ')')),
+              providerOptions.map((p) => React.createElement('option', { key: p.provider, value: p.provider }, p.displayName + ' (' + p.provider + ')')),
             ),
             React.createElement('div', { style: { marginTop: 8 } },
               React.createElement('select', { value: draft.model, style: selStyle, onChange: (e) => setDraft(Object.assign({}, draft, { model: e.target.value })) },
