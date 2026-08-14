@@ -6,8 +6,11 @@
  * Gives text-only models the ability to "see" images:
  *  - wraps llm.resolveModelInfo so text-only models pass the send admission
  *    and the read_image route gate (images get admitted instead of rejected);
- *  - listens to agent/pre-step and replaces image blocks (top-level and inside
- *    tool results) with a text description produced by a vision-capable model;
+ *  - listens to agent/pre-step and computes a text description (via a
+ *    vision-capable model) for every image-bearing user message; the message
+ *    stays as an IMAGE in the conversation history (UI shows the image), while
+ *    the model receives the description through a model-visible surface
+ *    replacement (session surfaceOp replace + a deriveMessages wrapper);
  *  - listens to tools/post-execute and replaces read_image's image block with
  *    that description before it is committed to session history.
  *
@@ -289,37 +292,94 @@ module.exports = {
       return requestConfig
     })
 
+    // 图片消息的“模型可见替换”：pre-step 里预计算好描述文字，等循环把原始
+    // 消息（含图片）追加进会话后，再追加一个 surface replace 事件。该替换只
+    // 影响模型可见表面（deriveMessages），UI 渲染只认 append 事件、跳过替换
+    // 事件 —— 所以对话记录显示图片，模型实际收到的是文字描述。
+    //
+    // 时序：循环在同步块里追加 user/message 后立刻同步调用 step()，其中的
+    // deriveMessages() 会先于任何微任务执行，因此还要包装 session.deriveMessages，
+    // 把 pre-step 已算好的描述同步套上（覆盖第一步请求）；持久化替换事件随后
+    // 由微任务写入，负责 resume/搜索等场景。
+    const pendingReplacements = new Map() // key: `${sessionId}:${messageId}` -> { content }
+    const lastTurns = new Map() // agentId -> turn
+
+    function ensureDeriveWrapped(agent) {
+      const session = agent && agent.session
+      if (!session || typeof session.deriveMessages !== 'function' || session.__imgvisDeriveWrapped) return
+      const realDerive = session.deriveMessages.bind(session)
+      session.deriveMessages = function () {
+        const messages = realDerive()
+        let changed = false
+        const out = messages.map((m) => {
+          if (!m || typeof m.id !== 'string') return m
+          const pending = pendingReplacements.get(String(session.id) + ':' + m.id)
+          if (!pending) return m
+          changed = true
+          return Object.assign({}, m, { content: pending.content })
+        })
+        return changed ? out : messages
+      }
+      session.__imgvisDeriveWrapped = true
+    }
+
     const offPreStep = ctx.on('agent/pre-step', async (payload, next) => {
       const decision = await next()
       if (!decision || decision.kind !== 'enter') return decision
       if (!cfg.enabled) return decision
 
       const agent = payload.agent
+      ensureDeriveWrapped(agent)
       const cur = currentModel(agent)
       if (cur && (await supportsImage(cur.provider, cur.model))) return decision
 
-      const messages = decision.messages || []
-      const memo = new Map()
-      let found = false
-      for (const m of messages) {
-        if (m && Array.isArray(m.content) && hasImageBlock(m.content)) {
-          found = true
-          break
-        }
+      // 新回合清空上一回合遗留的待替换记录（如被中止的回合）。
+      const agentId = String(agent && agent.id)
+      const turn = payload.turn
+      if (lastTurns.get(agentId) !== turn) {
+        lastTurns.set(agentId, turn)
+        pendingReplacements.clear()
       }
-      if (!found) return decision
 
-      const out = []
-      for (const m of messages) {
-        const blocks = m && Array.isArray(m.content) ? m.content : []
-        const transformed = await transformBlocks(blocks, memo)
+      const sessionId = String(agent && agent.session && agent.session.id)
+      const memo = new Map()
+      for (const m of decision.messages || []) {
+        if (!m || !Array.isArray(m.content) || !hasImageBlock(m.content)) continue
+        const transformed = await transformBlocks(m.content, memo)
         if (transformed.changed) {
-          out.push({ id: m.id, role: m.role, content: transformed.blocks, source: m.source })
-        } else {
-          out.push(m)
+          pendingReplacements.set(sessionId + ':' + m.id, { content: transformed.blocks })
         }
       }
-      return { kind: 'enter', messages: out }
+      // 不修改 decision：图片保留在会话历史里（对话记录显示图片），
+      // 模型侧由 deriveMessages 包装 + 持久化替换事件提供文字描述。
+      return decision
+    })
+
+    const offSessionEvent = ctx.on('session/event', (session, event) => {
+      if (!cfg.enabled) return
+      if (!event || event.type !== 'user/message') return
+      if (event.surfaceOp !== 'append') return
+      const data = event.data
+      if (!data || typeof data.id !== 'string') return
+      const key = String(session && session.id) + ':' + data.id
+      const pending = pendingReplacements.get(key)
+      if (!pending) return
+      pendingReplacements.delete(key)
+      const replacement = Object.assign({}, data, { content: pending.content })
+      const shadowed = event.seq
+      // 不能在 session/event 派发中重入 append；微任务在循环同步块结束后执行。
+      // 同步窗口由 deriveMessages 包装兜底，这里落盘持久化替换（resume/搜索）。
+      queueMicrotask(() => {
+        try {
+          session.append('user/message', replacement, {
+            surfaceOp: { op: 'replace', start: shadowed, end: shadowed },
+            sourceEventSeqs: [shadowed],
+          })
+          pendingReplacements.delete(key)
+        } catch (e) {
+          console.error('[imgvis] 写入模型可见替换失败（deriveMessages 包装仍在兜底）:', e)
+        }
+      })
     })
 
     const offPostExecute = ctx.on('tools/post-execute', async (exec, result, next) => {
@@ -352,6 +412,7 @@ module.exports = {
       offAssemble()
       offRequest()
       offPreStep()
+      offSessionEvent()
       offPostExecute()
       offSettingsUpdated()
       unpatchAdmission()

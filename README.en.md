@@ -6,7 +6,7 @@ Give **text-only models** the ability to "see" images: you can always send image
 
 ## Features
 
-1. **Send images to text-only models**: bypasses the "current model does not support images" admission; the model sees a `[图片内容描述] …` text instead.
+1. **Send images to text-only models**: bypasses the "current model does not support images" admission; the **conversation shows the image normally** (just like with a multimodal model), while the model actually receives a `[图片内容描述] …` text description.
 2. **`read_image` works for text-only models**: returns a text description instead of `UNSUPPORTED_CONTENT`.
 3. **Automatic multimodal detection**: vision-capable models pass through untouched.
 4. **Global (plugin form)**: as a host plugin it runs in every preset / mode.
@@ -14,7 +14,7 @@ Give **text-only models** the ability to "see" images: you can always send image
 ## How it works
 
 - Wraps `llm.resolveModelInfo`: makes the "send admission / tool gate" accept images for text-only models (can be disabled).
-- Listens to `agent/pre-step`: replaces image blocks (including those nested in tool results) with description text before the request is frozen.
+- Listens to `agent/pre-step`: pre-computes a text description for every image-bearing user message; the message itself stays as an **image** in the session history (the UI shows the image), while a **model-visible replacement** (session surface replace + a `deriveMessages` wrapper) gives the model the text description — the two never conflict, and the persisted replacement survives session resume.
 - Listens to `tools/post-execute`: replaces `read_image`'s image block with description text before it is committed.
 - Listens to `system-prompt/assemble`: captures the model actually in effect for the current step (including the in-session UI selection), so multimodal detection has **zero lag**.
 - Real multimodal detection uses the **original (pre-wrap) method**.
