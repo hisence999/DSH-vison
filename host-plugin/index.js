@@ -40,11 +40,11 @@ const configSchema = z.object({
 
 module.exports = {
   name: 'dsh-image-vision',
-  inject: ['llm'],
+  inject: ['llm', 'settings'],
   apply(ctx, config = {}) {
     const llm = ctx.llm
     const agentDefaultModel = ctx.get('agentDefaultModel')
-    const settings = ctx.get('settings')
+    const settings = ctx.settings
 
     // 持久化配置：注册 settings 命名空间（设置页 / settings.yaml 可编辑）。
     if (settings) {
