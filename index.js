@@ -126,7 +126,6 @@ module.exports = {
         })
       : () => {}
 
-    const descriptions = new Map()
     const modelByAgent = new Map()
 
     async function findVisionModel() {
@@ -157,13 +156,15 @@ module.exports = {
       }
     }
 
-    async function describe(ref) {
-      if (descriptions.has(ref.attachmentId)) return descriptions.get(ref.attachmentId)
+    // 每次发送都重新识别：不跨请求缓存描述。`memo` 仅作用于同一次决策内，
+    // 避免同一张图在同一轮里（如用户消息 + read_image 工具结果）被重复识别计费。
+    async function describe(ref, memo) {
+      if (memo && memo.has(ref.attachmentId)) return memo.get(ref.attachmentId)
       const vision = await findVisionModel()
       if (!vision) return null
       const messages = [
         {
-          id: 'imgvis-' + String(descriptions.size),
+          id: 'imgvis-' + String(Math.random().toString(36).slice(2)),
           role: 'user',
           content: [
             { type: 'text', text: cfg.prompt },
@@ -186,7 +187,7 @@ module.exports = {
         return null
       }
       if (text.trim().length === 0) return null
-      descriptions.set(ref.attachmentId, text)
+      if (memo) memo.set(ref.attachmentId, text)
       return text
     }
 
@@ -213,7 +214,7 @@ module.exports = {
       return false
     }
 
-    async function transformBlocks(blocks) {
+    async function transformBlocks(blocks, memo) {
       const out = []
       let changed = false
       for (const b of blocks) {
@@ -222,7 +223,7 @@ module.exports = {
           continue
         }
         if (b.type === 'image' && b.attachment) {
-          const desc = await describe(b.attachment)
+          const desc = await describe(b.attachment, memo)
           if (desc) {
             out.push({ type: 'text', text: '\n[图片内容描述]\n' + desc + '\n' })
             changed = true
@@ -230,7 +231,7 @@ module.exports = {
           }
           out.push(b)
         } else if (b.type === 'tool-result' && Array.isArray(b.content)) {
-          const inner = await transformBlocks(b.content)
+          const inner = await transformBlocks(b.content, memo)
           if (inner.changed) {
             out.push(Object.assign({}, b, { content: inner.blocks }))
             changed = true
@@ -269,6 +270,7 @@ module.exports = {
       if (cur && (await supportsImage(cur.provider, cur.model))) return decision
 
       const messages = decision.messages || []
+      const memo = new Map()
       let found = false
       for (const m of messages) {
         if (m && Array.isArray(m.content) && hasImageBlock(m.content)) {
@@ -281,7 +283,7 @@ module.exports = {
       const out = []
       for (const m of messages) {
         const blocks = m && Array.isArray(m.content) ? m.content : []
-        const transformed = await transformBlocks(blocks)
+        const transformed = await transformBlocks(blocks, memo)
         if (transformed.changed) {
           out.push({ id: m.id, role: m.role, content: transformed.blocks, source: m.source })
         } else {
@@ -304,7 +306,7 @@ module.exports = {
       const imageBlock = (result.content || []).find((b) => b && b.type === 'image')
       if (!imageBlock || !imageBlock.attachment) return decision
 
-      const desc = await describe(imageBlock.attachment)
+      const desc = await describe(imageBlock.attachment, new Map())
       if (!desc) return decision
 
       const env = (result.content || [])

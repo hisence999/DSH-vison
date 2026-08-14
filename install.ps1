@@ -4,9 +4,8 @@
 #
 # 安装内容：
 #   1) 打 apiproxy 补丁：把 dsh-image-vision 加入 settings 暴露白名单（设置页必需）
-#   2) 全局安装 host 插件：复制到 $DSH_HOME/profiles/node_modules/dsh-image-vision
+#   2) 全局安装插件：复制到 $DSH_HOME/profiles/node_modules/dsh-image-vision
 #   3) 写入 profile patch：把 image-vision 行追加到每个 profiles/<name>/cordis.patch.yml
-#   4) （可选，-Preset）安装「DSH Vision」会话预设到 .agent-presets/dsh-vision
 # 安装完成后需要重启 DSH。
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -66,13 +65,13 @@ function Patch-ApiProxy {
 Write-Host '== 1/3 打 apiproxy 设置白名单补丁 =='
 Patch-ApiProxy
 
-# ---------- 2) 全局 host 插件 ----------
+# ---------- 2) 全局插件 ----------
 $pkgDir = Join-Path $dshHome 'profiles\node_modules\dsh-image-vision'
 New-Item -ItemType Directory -Force -Path $pkgDir | Out-Null
 Write-Host ''
-Write-Host ("== 2/3 安装全局 host 插件到 " + $pkgDir + " ==")
+Write-Host ("== 2/3 安装插件到 " + $pkgDir + " ==")
 foreach ($f in @('index.js', 'client.js', 'package.json')) {
-    Invoke-WebRequest -Uri "$base/host-plugin/$f" -OutFile (Join-Path $pkgDir $f) -UseBasicParsing
+    Invoke-WebRequest -Uri "$base/$f" -OutFile (Join-Path $pkgDir $f) -UseBasicParsing
     Write-Host "  OK  $f"
 }
 
@@ -104,18 +103,6 @@ if (Test-Path -LiteralPath $profiles) {
     }
 }
 if (-not $patched) { Write-Host '  !! 未找到任何 profiles/*/cordis.patch.yml，请手动添加 image-vision 行' }
-
-# ---------- 4) 可选：会话预设 ----------
-if ($args -contains '-Preset' -or $args -contains '-preset') {
-    Write-Host ''
-    Write-Host '== 附加：安装「DSH Vision」会话预设 =='
-    $dest = Join-Path $dshHome '.agent-presets\dsh-vision'
-    New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    foreach ($f in @('agent.cordis.yml', 'preset.yml', 'plugin.mjs')) {
-        Invoke-WebRequest -Uri "$base/preset/$f" -OutFile (Join-Path $dest $f) -UseBasicParsing
-        Write-Host "  OK  $f"
-    }
-}
 
 Write-Host ''
 Write-Host '完成！请重启 DSH（退出 dsh 进程后重新运行），然后在「设置 → 图片理解」中查看/保存配置。'

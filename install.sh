@@ -5,9 +5,8 @@
 #
 # Installs:
 #   1) apiproxy allowlist patch (required for the settings page)
-#   2) the global host plugin into $DSH_HOME/profiles/node_modules/dsh-image-vision
+#   2) the plugin into $DSH_HOME/profiles/node_modules/dsh-image-vision
 #   3) the image-vision row into every profiles/<name>/cordis.patch.yml
-#   4) (optional, --preset) the "DSH Vision" session preset
 # Restart DSH after installing.
 set -euo pipefail
 
@@ -69,13 +68,13 @@ patch_apiproxy() {
 echo "== 1/3 apiproxy settings allowlist patch =="
 patch_apiproxy
 
-# ---------- 2) global host plugin ----------
+# ---------- 2) global plugin ----------
 PKG_DIR="$DSH_HOME_DIR/profiles/node_modules/dsh-image-vision"
 mkdir -p "$PKG_DIR"
 echo ""
-echo "== 2/3 installing global host plugin to $PKG_DIR =="
+echo "== 2/3 installing plugin to $PKG_DIR =="
 for f in index.js client.js package.json; do
-  curl -fsSL "$BASE/host-plugin/$f" -o "$PKG_DIR/$f"
+  curl -fsSL "$BASE/$f" -o "$PKG_DIR/$f"
   echo "  OK  $f"
 done
 
@@ -105,18 +104,6 @@ if [ -d "$DSH_HOME_DIR/profiles" ]; then
 fi
 if [ "$PATCHED" -eq 0 ]; then
   echo "  !! no profiles/*/cordis.patch.yml found; add the image-vision row manually"
-fi
-
-# ---------- 4) optional session preset ----------
-if [ "${1:-}" = "--preset" ]; then
-  echo ""
-  echo "== extra: installing the \"DSH Vision\" session preset =="
-  DEST="$DSH_HOME_DIR/.agent-presets/dsh-vision"
-  mkdir -p "$DEST"
-  for f in agent.cordis.yml preset.yml plugin.mjs; do
-    curl -fsSL "$BASE/preset/$f" -o "$DEST/$f"
-    echo "  OK  $f"
-  done
 fi
 
 echo ""

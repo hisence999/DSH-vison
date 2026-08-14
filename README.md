@@ -39,14 +39,14 @@ curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.s
 安装脚本会做三件事：
 
 1. **打 apiproxy 白名单补丁**：把 `dsh-image-vision` 加入 DSH 设置页的命名空间暴露白名单（见下方「设置页要求」）；
-2. 把 `host-plugin/` 复制为 `$DSH_HOME/profiles/node_modules/dsh-image-vision/`；
+2. 把插件本体（`index.js` / `client.js` / `package.json`）复制为 `$DSH_HOME/profiles/node_modules/dsh-image-vision/`；
 3. 在每个 `$DSH_HOME/profiles/<name>/cordis.patch.yml` 末尾追加 `image-vision` 行（幂等，重复执行安全）。
 
 **安装完成后请重启 DSH**，然后打开 **「设置 → 图片理解」** 即可可视化配置（开关、识别模型、提示词），保存后立即生效。配置持久化在 settings 命名空间 `dsh-image-vision`（也可直接编辑 `settings.yaml`）；`cordis.patch.yml` 里的 `config` 仅作 settings 不可用时的兜底。
 
 ### 方式二：手动安装（与一键安装等价）
 
-1. 把 `host-plugin/` 目录复制为 `$DSH_HOME/profiles/<profile>/node_modules/dsh-image-vision/`（`<profile>` 是你的 profile 名，Web 版通常是 `web`；Windows 完整路径类似 `C:\Users\<你>\.dsh\profiles\web\node_modules\dsh-image-vision`）。
+1. 把仓库根目录的 `index.js`、`client.js`、`package.json` 复制到 `$DSH_HOME/profiles/<profile>/node_modules/dsh-image-vision/`（`<profile>` 是你的 profile 名，Web 版通常是 `web`；Windows 完整路径类似 `C:\Users\<你>\.dsh\profiles\web\node_modules\dsh-image-vision`）。
 2. 运行 [patch-apiproxy.ps1](patch-apiproxy.ps1)（或 Linux/macOS 的 [patch-apiproxy.sh](patch-apiproxy.sh)），把 `dsh-image-vision` 加入 `dsh-host-apiproxy` 的设置暴露白名单。
 3. 在 `$DSH_HOME/profiles/<profile>/cordis.patch.yml` 末尾追加：
 
@@ -61,20 +61,6 @@ curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.s
 
 4. 重启 DSH。
 
-### 方式三：预设形式（持久化，仅选中该预设的会话生效）
-
-1. 把 `preset/` 目录复制为 `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`。
-2. 新建会话时选择「DSH Vision」预设。
-3. 识别模型自动探测；如需手动指定，编辑 `preset/plugin.mjs` 里的 `config.provider` / `config.model`。
-
-### 方式四：动态插件（完整功能，含设置页，进程内临时）
-
-1. 打开 DSH 动态 Cordis 插件面板，新建插件（前缀可填 `imgvis`）。
-2. Host 代码框粘贴 [`src/host.js`](src/host.js)，Client 代码框粘贴 [`src/client.js`](src/client.js)。
-3. 运行并批准，打开「设置 → 图片理解」配置。
-
-> 动态插件是进程内临时对象，重启后失效。
-
 ## 设置页要求（apiproxy 暴露白名单）
 
 DSH 的设置页只向客户端暴露一个**写死的命名空间白名单**（`dsh-host-apiproxy/lib/index.js` 里的 `WEB_SETTINGS_NAMESPACES`；源码注释明确说明这是插件设置页的决策点）。因此插件自己的设置命名空间 `dsh-image-vision` 默认**不会**出现在设置页 —— 未打补丁时页面会提示「未找到 dsh-image-vision 设置命名空间」。
@@ -84,7 +70,7 @@ DSH 的设置页只向客户端暴露一个**写死的命名空间白名单**（
 ## 限制与说明
 
 - **需要 DSH 里至少已配置一个支持图片的模型**，否则无法生成描述。
-- 识别描述会**按图片内容哈希（attachmentId）缓存**，同一张图只识别一次。
+- **不缓存描述**：每次发送图片都会调用视觉模型重新识别（同一轮内同一张图只识别一次，避免重复计费）。
 - `patchAdmission` 是对共享 `llm` 服务的一次**可逆包装**，停止/更新插件时会还原；它可能让个别界面把纯文本模型显示为“支持图片”（仅展示层面，不影响真实调用）。
 - 会话中途切换模型后的**第一步**可能仍按旧模型判定（存在 1 步滞后）。
 

@@ -1,2 +1,0 @@
-name: DSH Vision
-description: 为不支持多模态的模型提供图片理解：发送图片或调用 read_image 时，自动用视觉模型生成文字描述。
