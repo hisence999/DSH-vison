@@ -68,6 +68,22 @@ DSH's settings page only exposes namespaces from a **hardcoded allowlist** (`WEB
 
 The installer adds the namespace to that allowlist idempotently. **Upgrading/reinstalling DSH (e.g. `npm update @deepseek-ai/dsh`) overwrites the file — re-run the installer afterwards.**
 
+## Uninstall
+
+Windows (PowerShell, one line):
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.ps1 | iex
+```
+
+Linux / macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.sh | bash
+```
+
+The uninstaller removes the plugin package, the `image-vision` row from every `cordis.patch.yml`, and reverts the apiproxy allowlist patch (idempotent; safe to re-run). The `settings.yaml` config is kept by default (restored automatically on reinstall); pass `-PurgeConfig` (Windows) or `--purge-config` (Unix) to remove it too. **Restart DSH after uninstalling.**
+
 ## Caveats
 
 - **At least one image-capable model must be configured in your DSH**, otherwise no description can be generated.

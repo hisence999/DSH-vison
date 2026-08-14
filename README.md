@@ -68,6 +68,22 @@ DSH 的设置页只向客户端暴露一个**写死的命名空间白名单**（
 
 安装脚本会幂等地把这个命名空间加进白名单。**升级/重装 DSH（`npm update @deepseek-ai/dsh` 等）会覆盖该文件，需要重新运行安装脚本。**
 
+## 卸载
+
+Windows（PowerShell 一行）：
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.ps1 | iex
+```
+
+Linux / macOS：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.sh | bash
+```
+
+卸载脚本会删除插件包、移除 `cordis.patch.yml` 里的 `image-vision` 行、还原 apiproxy 白名单补丁（幂等，可重复执行）。`settings.yaml` 里的配置默认保留（重装后自动恢复），如需一并清理加 `-PurgeConfig`（Windows）或 `--purge-config`（Unix）。**卸载后需重启 DSH。**
+
 ## 限制与说明
 
 - **需要 DSH 里至少已配置一个支持图片的模型**，否则无法生成描述。
