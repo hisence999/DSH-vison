@@ -1,100 +1,14 @@
-# DSH Vision · 图片理解插件 / Image Understanding Plugin
+# DSH Vision
 
-为**不支持多模态的模型**提供图片理解能力：无论当前是否多模态模型，你都可以直接发送图片；纯文本模型会自动把图片拦截下来，调用一个已配置的多模态模型识别，再把**文字描述**回传给模型。
+> 为不支持多模态的模型提供图片理解能力 —— 纯文本模型也能“看图”。
+> Give text-only models the ability to “see” images.
 
-Give **text-only models** the ability to "see" images: you can always send images, and when the active model does not support images, the plugin transparently replaces the image with a **text description** produced by a vision-capable model.
+## 文档 / Documentation
 
----
-
-## 功能 / Features
-
-1. **纯文本模型直接发图**：绕过发送时的「当前模型不支持图片」拦截，图片正常进入对话，模型看到的是一段 `[图片内容描述] …` 文字。
-2. **`read_image` 工具可用**：纯文本模型调用 `read_image` 读图片时，同样能拿到图片的文字描述，而不是报 `UNSUPPORTED_CONTENT`。
-3. **多模态自动检测**：多模态模型原样放行、不拦截、不浪费 token。
-4. **设置页（动态版）**：可选识别模型、自定义描述提示词、开关。
-
----
-
-## 工作原理 / How it works
-
-- 监听 `agent/pre-step`：在模型请求被冻结之前，把消息里的图片块（含 tool-result 内嵌图片）替换成描述文字。
-- 监听 `tools/post-execute`：在 `read_image` 的结果写入会话历史之前，把图片块替换成描述文字。
-- 包装 `llm.resolveModelInfo`：让纯文本模型在「发送准入 / 工具门禁」两层都放行图片（可在设置里关闭）。
-- 真实的多模态判定使用**包装前的原始方法**，避免误判。
-
----
-
-## 安装 / Install
-
-> 仓库包含两种形态：`src/` 是**动态插件源码**（完整功能，含设置页）；`preset/` 是**持久化预设版**（仅 Host、自动探测识别模型）。任选其一。
-
-### 方式 A：动态插件（完整功能，含设置页）
-
-需要你在 DSH 里具备「动态 Cordis 插件」能力（即 `cordis` 预设 / cordis_* 工具）。
-
-1. 打开 DSH Web 界面，进入动态 Cordis 插件面板。
-2. 新建一个插件（语义前缀可填 `imgvis`）。
-3. Host 代码框粘贴 [`src/host.js`](src/host.js) 的完整内容。
-4. Client 代码框粘贴 [`src/client.js`](src/client.js) 的完整内容。
-5. 运行并批准。
-6. 打开左下角「设置 → 图片理解」配置识别模型。
-
-> 注意：动态插件是**进程内临时对象**，DSH 重启后会失效，需要重新粘贴运行。
-
-### 方式 B：持久化预设（免设置页，推荐日常使用）
-
-1. 把 `preset/` 目录复制为：`${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`（Windows 通常是 `C:\Users\<你>\.dsh\.agent-presets\dsh-vision`）。
-2. 在 DSH 新建会话时选择名为 **「DSH Vision」** 的预设（或把该预设挂到你的会话上）。
-3. 无需配置：识别模型会**自动探测**第一个声明支持图片的模型；如想手动指定，编辑 `preset/plugin.mjs` 里 `config.provider` / `config.model`。
-
-### Method A: dynamic plugin (full features, with settings page)
-
-Requires the DSH "dynamic Cordis plugin" capability (`cordis` preset / cordis_* tools).
-
-1. Open the DSH Web GUI and the dynamic Cordis plugin panel.
-2. Create a new plugin (semantic prefix e.g. `imgvis`).
-3. Paste the whole [`src/host.js`](src/host.js) into the Host code box.
-4. Paste the whole [`src/client.js`](src/client.js) into the Client code box.
-5. Run and approve.
-6. Open "Settings → 图片理解" to pick the vision model.
-
-> Note: a dynamic plugin is process-local and disappears after a DSH restart.
-
-### Method B: persistent preset (no settings page, recommended)
-
-1. Copy the `preset/` folder to `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/` (on Windows, usually `C:\Users\<you>\.dsh\.agent-presets\dsh-vision`).
-2. Start a new session with the **"DSH Vision"** preset (or mount it onto your session).
-3. No configuration needed: the vision model is auto-detected (first model that declares image input). To pin one, edit `config.provider` / `config.model` in `preset/plugin.mjs`.
-
----
-
-## 配置 / Configuration
-
-| 字段 / Field | 默认 / Default | 说明 / Meaning |
-| --- | --- | --- |
-| `provider` / `model` | 空 = 自动探测 | 识别图片所用的多模态模型；留空则自动探测第一个支持图片的模型 |
-| `prompt` | 见源码 | 描述图片用的提示词 |
-| `patchAdmission` | `true` | 是否放行纯文本模型发图（及 `read_image` 门禁） |
-| `enabled` | `true` | 总开关 |
-
----
-
-## 限制与说明 / Caveats
-
-- **需要 DSH 里至少已配置一个支持图片的模型**，否则无法生成描述（设置页会显示「当前生效的识别模型」为空）。
-- 识别描述会**按图片内容哈希（attachmentId）缓存**，同一张图只识别一次。
-- `patchAdmission` 是对共享 `llm` 服务的一次**可逆包装**，停止/更新插件时会还原；它可能让个别界面把纯文本模型显示为“支持图片”（仅展示层面，不影响真实调用）。
-- 会话中途切换模型后的**第一步**可能仍按旧模型判定（存在 1 步滞后）。
-
----
-
-## 安全 / Security
-
-本仓库**不含任何密钥**：不硬编码 API Key、端点或供应商，识别模型一律从你 DSH 自身已配置的供应商中读取。请勿自行添加凭据。
-
-This repository ships **no secrets**: no API keys, endpoints, or provider credentials are hardcoded. The vision model is always resolved from the providers you have already configured in your own DSH.
-
----
+| 语言 Language | 链接 Link |
+| --- | --- |
+| 中文 | [README.zh-CN.md](README.zh-CN.md) |
+| English | [README.en.md](README.en.md) |
 
 ## License
 
