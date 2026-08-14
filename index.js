@@ -409,7 +409,10 @@ module.exports = {
       const key = String(session && session.id) + ':' + data.id
       const pending = pendingReplacements.get(key)
       if (!pending) return
-      pendingReplacements.delete(key)
+      // 注意：不能在这里同步删除 pending！循环在同步块里追加消息后立刻同步调用
+      // step()（其同步前缀里就有 deriveMessages），早于本监听器排队的微任务。
+      // pending 必须保留到包装的 deriveMessages 读完为止，否则第一步请求仍会
+      // 带着图片。持久化替换事件在微任务里落盘成功后才会删除该条目。
       const replacement = Object.assign({}, data, { content: pending.content })
       const shadowed = event.seq
       // 不能在 session/event 派发中重入 append；微任务在循环同步块结束后执行。
