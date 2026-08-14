@@ -95,6 +95,10 @@ curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall
 
 本仓库**不含任何密钥**：不硬编码 API Key、端点或供应商，识别模型一律从你 DSH 自身已配置的供应商中读取。请勿自行添加凭据。
 
+## 致谢
+
+感谢 [Linux.do](https://linux.do) 社区的支持与帮助！
+
 ## License
 
 [MIT](LICENSE)

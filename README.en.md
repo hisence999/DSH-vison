@@ -94,6 +94,10 @@ The uninstaller removes the plugin package, the `image-vision` row from every `c
 
 This repository ships **no secrets**: no API keys, endpoints, or provider credentials are hardcoded. The vision model is always resolved from the providers you have already configured in your own DSH.
 
+## Acknowledgments
+
+Thanks to the [Linux.do](https://linux.do) community for their support!
+
 ## License
 
 [MIT](LICENSE)
