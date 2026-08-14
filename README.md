@@ -20,12 +20,35 @@
 
 ## 安装
 
-### 方式一：插件形式（推荐，全局生效）
+### 方式一：一键安装（推荐，全局生效）
 
 这是宿主组合（host composition）插件，通过 profile 补丁层挂载，**在任何预设/模式下都运行**、重启后仍在。
 
+Windows（PowerShell 一行）：
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+```
+
+Linux / macOS：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+```
+
+安装脚本会做三件事：
+
+1. **打 apiproxy 白名单补丁**：把 `dsh-image-vision` 加入 DSH 设置页的命名空间暴露白名单（见下方「设置页要求」）；
+2. 把 `host-plugin/` 复制为 `$DSH_HOME/profiles/node_modules/dsh-image-vision/`；
+3. 在每个 `$DSH_HOME/profiles/<name>/cordis.patch.yml` 末尾追加 `image-vision` 行（幂等，重复执行安全）。
+
+**安装完成后请重启 DSH**，然后打开 **「设置 → 图片理解」** 即可可视化配置（开关、识别模型、提示词），保存后立即生效。配置持久化在 settings 命名空间 `dsh-image-vision`（也可直接编辑 `settings.yaml`）；`cordis.patch.yml` 里的 `config` 仅作 settings 不可用时的兜底。
+
+### 方式二：手动安装（与一键安装等价）
+
 1. 把 `host-plugin/` 目录复制为 `$DSH_HOME/profiles/<profile>/node_modules/dsh-image-vision/`（`<profile>` 是你的 profile 名，Web 版通常是 `web`；Windows 完整路径类似 `C:\Users\<你>\.dsh\profiles\web\node_modules\dsh-image-vision`）。
-2. 在 `$DSH_HOME/profiles/<profile>/cordis.patch.yml` 末尾追加：
+2. 运行 [patch-apiproxy.ps1](patch-apiproxy.ps1)（或 Linux/macOS 的 [patch-apiproxy.sh](patch-apiproxy.sh)），把 `dsh-image-vision` 加入 `dsh-host-apiproxy` 的设置暴露白名单。
+3. 在 `$DSH_HOME/profiles/<profile>/cordis.patch.yml` 末尾追加：
 
 ```yaml
 - insert:
@@ -36,23 +59,27 @@
         patchAdmission: true
 ```
 
-3. 重启 DSH（或等补丁层 HMR 热重载）。
+4. 重启 DSH。
 
-装好后，打开 **「设置 → 图片理解」** 即可可视化配置（开关、识别模型、提示词），保存后立即生效。配置持久化在 settings 命名空间 `dsh-image-vision`（也可直接编辑 `settings.yaml`）；`cordis.patch.yml` 里的 `config` 仅作 settings 不可用时的兜底。
-
-### 方式二：预设形式（持久化，仅选中该预设的会话生效）
+### 方式三：预设形式（持久化，仅选中该预设的会话生效）
 
 1. 把 `preset/` 目录复制为 `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`。
 2. 新建会话时选择「DSH Vision」预设。
 3. 识别模型自动探测；如需手动指定，编辑 `preset/plugin.mjs` 里的 `config.provider` / `config.model`。
 
-### 方式三：动态插件（完整功能，含设置页，进程内临时）
+### 方式四：动态插件（完整功能，含设置页，进程内临时）
 
 1. 打开 DSH 动态 Cordis 插件面板，新建插件（前缀可填 `imgvis`）。
 2. Host 代码框粘贴 [`src/host.js`](src/host.js)，Client 代码框粘贴 [`src/client.js`](src/client.js)。
 3. 运行并批准，打开「设置 → 图片理解」配置。
 
 > 动态插件是进程内临时对象，重启后失效。
+
+## 设置页要求（apiproxy 暴露白名单）
+
+DSH 的设置页只向客户端暴露一个**写死的命名空间白名单**（`dsh-host-apiproxy/lib/index.js` 里的 `WEB_SETTINGS_NAMESPACES`；源码注释明确说明这是插件设置页的决策点）。因此插件自己的设置命名空间 `dsh-image-vision` 默认**不会**出现在设置页 —— 未打补丁时页面会提示「未找到 dsh-image-vision 设置命名空间」。
+
+安装脚本会幂等地把这个命名空间加进白名单。**升级/重装 DSH（`npm update @deepseek-ai/dsh` 等）会覆盖该文件，需要重新运行安装脚本。**
 
 ## 限制与说明
 

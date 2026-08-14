@@ -20,12 +20,35 @@ Give **text-only models** the ability to "see" images: you can always send image
 
 ## Install
 
-### Method 1: plugin form (recommended, global)
+### Method 1: one-line installer (recommended, global)
 
 A host-composition plugin mounted through the profile patch layer: runs in **every preset/mode** and survives restarts.
 
+Windows (PowerShell, one line):
+
+```powershell
+irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+```
+
+Linux / macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+```
+
+The installer does three things:
+
+1. **Patches the apiproxy allowlist**: adds `dsh-image-vision` to the settings-page namespace exposure allowlist (see "Settings page requirement" below);
+2. Copies `host-plugin/` to `$DSH_HOME/profiles/node_modules/dsh-image-vision/`;
+3. Appends the `image-vision` row to every `$DSH_HOME/profiles/<name>/cordis.patch.yml` (idempotent; safe to re-run).
+
+**Restart DSH after installing**, then open **"Settings → 图片理解"** for a visual config page (switches, vision model, prompt); changes apply immediately. The config persists in the settings namespace `dsh-image-vision` (also editable in `settings.yaml`); the `config` in `cordis.patch.yml` is only a fallback when settings is unavailable.
+
+### Method 2: manual install (equivalent to the one-line installer)
+
 1. Copy the `host-plugin/` folder to `$DSH_HOME/profiles/<profile>/node_modules/dsh-image-vision/` (`<profile>` is your profile name, usually `web` for the web app; e.g. `C:\Users\<you>\.dsh\profiles\web\node_modules\dsh-image-vision` on Windows).
-2. Append to `$DSH_HOME/profiles/<profile>/cordis.patch.yml`:
+2. Run [patch-apiproxy.ps1](patch-apiproxy.ps1) (Windows) or [patch-apiproxy.sh](patch-apiproxy.sh) (Linux/macOS) to add `dsh-image-vision` to the `dsh-host-apiproxy` settings exposure allowlist.
+3. Append to `$DSH_HOME/profiles/<profile>/cordis.patch.yml`:
 
 ```yaml
 - insert:
@@ -36,23 +59,27 @@ A host-composition plugin mounted through the profile patch layer: runs in **eve
         patchAdmission: true
 ```
 
-3. Restart DSH (or wait for the patch-layer HMR).
+4. Restart DSH.
 
-After installing, open **"Settings → 图片理解"** for a visual config page (switches, vision model, prompt); changes apply immediately. The config persists in the settings namespace `dsh-image-vision` (also editable in `settings.yaml`); the `config` in `cordis.patch.yml` is only a fallback when settings is unavailable.
-
-### Method 2: preset form (persistent, per selected preset)
+### Method 3: preset form (persistent, per selected preset)
 
 1. Copy the `preset/` folder to `${DSH_HOME:-$HOME/.dsh}/.agent-presets/dsh-vision/`.
 2. Start a session with the "DSH Vision" preset.
 3. The vision model is auto-detected; edit `preset/plugin.mjs` to pin one.
 
-### Method 3: dynamic plugin (full features, with settings page, process-local)
+### Method 4: dynamic plugin (full features, with settings page, process-local)
 
 1. Open the DSH dynamic Cordis plugin panel; create a plugin (prefix e.g. `imgvis`).
 2. Paste [`src/host.js`](src/host.js) into Host, [`src/client.js`](src/client.js) into Client.
 3. Run, approve, then open "Settings → 图片理解".
 
 > A dynamic plugin is process-local and disappears after a restart.
+
+## Settings page requirement (apiproxy exposure allowlist)
+
+DSH's settings page only exposes namespaces from a **hardcoded allowlist** (`WEB_SETTINGS_NAMESPACES` in `dsh-host-apiproxy/lib/index.js`; the source comment explicitly marks this as the decision point for plugin settings sections). So the plugin's own namespace `dsh-image-vision` is **not** served to the settings page by default — without the patch the page shows "未找到 dsh-image-vision 设置命名空间".
+
+The installer adds the namespace to that allowlist idempotently. **Upgrading/reinstalling DSH (e.g. `npm update @deepseek-ai/dsh`) overwrites the file — re-run the installer afterwards.**
 
 ## Caveats
 

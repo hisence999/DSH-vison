@@ -108,7 +108,7 @@ window.__ModuleLoader__.load({
         }
 
         if (missing) {
-          return React.createElement('div', null, '未找到 dsh-image-vision 设置命名空间（插件 Host 半边可能未运行）。');
+          return React.createElement('div', null, '未找到 dsh-image-vision 设置命名空间：它尚未加入 DSH 的 settings 暴露白名单。请运行仓库中的 install 脚本（含 apiproxy 补丁）后重启 DSH。');
         }
         if (!draft || !meta) {
           return React.createElement('div', { style: { fontSize: 13, opacity: 0.6 } }, '加载中…');
