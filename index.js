@@ -148,6 +148,34 @@ module.exports = {
       return null
     }
 
+    // 候选视觉模型：固定配置的模型优先，再补上所有已配置供应商里支持图片的模型。
+    async function visionCandidates(pinned) {
+      const list = []
+      const seen = new Set()
+      const push = (p, m) => {
+        const key = p + '/' + m
+        if (seen.has(key)) return
+        seen.add(key)
+        list.push({ provider: p, model: m })
+      }
+      if (pinned) push(pinned.provider, pinned.model)
+      try {
+        for (const p of llm.listProviders()) {
+          try {
+            const models = await llm.listModels(p.id)
+            for (const m of models) {
+              if ((m.inputModalities || []).indexOf('image') !== -1) push(p.id, m.id)
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      return list.slice(0, 4)
+    }
+
     // Real multimodal capability, read through the original (unwrapped) method.
     async function supportsImage(provider, model) {
       if (!provider || !model || !realResolveModelInfo) return false
@@ -159,12 +187,11 @@ module.exports = {
       }
     }
 
-    // 每次发送都重新识别：不跨请求缓存描述。`memo` 仅作用于同一次决策内，
-    // 避免同一张图在同一轮里（如用户消息 + read_image 工具结果）被重复识别计费。
-    async function describe(ref, memo) {
-      if (memo && memo.has(ref.attachmentId)) return memo.get(ref.attachmentId)
-      const vision = await findVisionModel()
-      if (!vision) return null
+    function delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms))
+    }
+
+    async function streamDescribe(provider, model, ref) {
       const messages = [
         {
           id: 'imgvis-' + String(Math.random().toString(36).slice(2)),
@@ -178,18 +205,36 @@ module.exports = {
       ]
       let text = ''
       try {
-        for await (const chunk of llm.stream({
-          provider: vision.provider,
-          model: vision.model,
-          messages,
-        })) {
+        for await (const chunk of llm.stream({ provider, model, messages })) {
           if (chunk.type === 'text-delta') text += chunk.text
         }
       } catch (e) {
-        console.error('[imgvis] 视觉识别失败:', e)
+        console.error('[imgvis] 视觉识别失败 (' + provider + '/' + model + '):', e)
         return null
       }
-      if (text.trim().length === 0) return null
+      return text.trim().length > 0 ? text : null
+    }
+
+    // 每次发送都重新识别：不跨请求缓存描述。`memo` 仅作用于同一次决策内，
+    // 避免同一张图在同一轮里（如用户消息 + read_image 工具结果）被重复识别计费。
+    // 失败时依次重试候选视觉模型；全部失败则返回占位描述，绝不让图片裸奔进
+    // 纯文本模型（否则适配器会直接报 UNSUPPORTED_CONTENT 使整个回合失败）。
+    async function describe(ref, memo) {
+      if (memo && memo.has(ref.attachmentId)) return memo.get(ref.attachmentId)
+      const vision = await findVisionModel()
+      if (!vision) return null
+      const candidates = await visionCandidates(vision)
+      let text = null
+      for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i]
+        text = await streamDescribe(c.provider, c.model, ref)
+        if (text !== null) break
+        if (i + 1 < candidates.length) await delay(600)
+      }
+      if (text === null) {
+        console.error('[imgvis] 所有视觉模型识别失败，使用占位描述')
+        text = '（图片内容识别失败，请稍后重试或检查视觉模型配置）'
+      }
       if (memo) memo.set(ref.attachmentId, text)
       return text
     }
