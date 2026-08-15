@@ -1,6 +1,6 @@
 # DSH Vision 一键安装脚本（Windows PowerShell）
 # 用法（一行命令）：
-#   irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.ps1 | iex
 #
 # 安装内容：
 #   1) 打 apiproxy 补丁：把 dsh-image-vision 加入 settings 暴露白名单（设置页必需）
@@ -14,7 +14,7 @@ $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME }
            elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE '.dsh' }
            else { Join-Path $HOME '.dsh' }
 
-$base = 'https://raw.githubusercontent.com/hisence999/DSH-vison/main'
+$base = 'https://raw.githubusercontent.com/hisence999/DSH-vision/main'
 
 # ---------- 1) apiproxy 暴露白名单补丁（幂等） ----------
 function Find-ApiProxyFile {
@@ -56,7 +56,7 @@ function Patch-ApiProxy {
         Write-Host '  !! 未找到白名单锚点，跳过 apiproxy 补丁（DSH 版本可能不兼容）'
         return
     }
-    $insert = "`t$anchor,`r`n`t// dsh-image-vision: settings section for the DSH-vison plugin (added by DSH-vison installer)`r`n`t`"dsh-image-vision`""
+    $insert = "`t$anchor,`r`n`t// dsh-image-vision: settings section for the DSH-vision plugin (added by DSH-vision installer)`r`n`t`"dsh-image-vision`""
     $content = $content.Replace($anchor, $insert)
     [System.IO.File]::WriteAllText($file, $content, $utf8)
     Write-Host "  OK  apiproxy 白名单已加入 dsh-image-vision：$file"

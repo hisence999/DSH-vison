@@ -28,13 +28,13 @@ A host-composition plugin mounted through the profile patch layer: runs in **eve
 Windows (PowerShell, one line):
 
 ```powershell
-irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.ps1 | iex
 ```
 
 Linux / macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.sh | bash
 ```
 
 The installer does three things:
@@ -73,13 +73,13 @@ The installer adds the namespace to that allowlist idempotently. **Upgrading/rei
 Windows (PowerShell, one line):
 
 ```powershell
-irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.ps1 | iex
 ```
 
 Linux / macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.sh | bash
 ```
 
 The uninstaller removes the plugin package, the `image-vision` row from every `cordis.patch.yml`, and reverts the apiproxy allowlist patch (idempotent; safe to re-run). The `settings.yaml` config is kept by default (restored automatically on reinstall); pass `-PurgeConfig` (Windows) or `--purge-config` (Unix) to remove it too. **Restart DSH after uninstalling.**

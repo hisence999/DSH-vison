@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DSH-vison: patch the dsh-host-apiproxy settings exposure allowlist so the
+# DSH-vision: patch the dsh-host-apiproxy settings exposure allowlist so the
 # "dsh-image-vision" settings namespace is served to the web settings page.
 # Idempotent — safe to run repeatedly.
 #
@@ -44,7 +44,7 @@ fi
 awk '
   /"web-search-deepseek"/ && !done {
     print "\t" $0 ","
-    print "\t// dsh-image-vision: settings section for the DSH-vison plugin (added by DSH-vison installer)"
+    print "\t// dsh-image-vision: settings section for the DSH-vision plugin (added by DSH-vision installer)"
     print "\t\"dsh-image-vision\""
     done = 1
     next

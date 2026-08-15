@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # DSH Vision uninstaller (Linux / macOS)
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.sh | bash
 #
 # Removes:
 #   1) $DSH_HOME/profiles/node_modules/dsh-image-vision/ (the plugin package)

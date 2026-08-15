@@ -1,10 +1,10 @@
-# DSH-vison: patch the dsh-host-apiproxy settings exposure allowlist so the
+# DSH-vision: patch the dsh-host-apiproxy settings exposure allowlist so the
 # "dsh-image-vision" settings namespace is served to the web settings page.
 # This is the framework seam the apiproxy source comment points at
 # (WEB_SETTINGS_NAMESPACES). Idempotent — safe to run repeatedly.
 #
 # Usage:  powershell -ExecutionPolicy Bypass -File patch-apiproxy.ps1
-#         (or:  irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/patch-apiproxy.ps1 | iex)
+#         (or:  irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/patch-apiproxy.ps1 | iex)
 $ErrorActionPreference = 'Stop'
 
 $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME }
@@ -42,7 +42,7 @@ if ($content -match '"dsh-image-vision"') {
 $anchor = '"web-search-deepseek"'
 if (-not $content.Contains($anchor)) { Write-Error '未找到白名单锚点，DSH 版本可能不兼容。' }
 
-$insert = "`t$anchor,`r`n`t// dsh-image-vision: settings section for the DSH-vison plugin (added by DSH-vison installer)`r`n`t`"dsh-image-vision`""
+$insert = "`t$anchor,`r`n`t// dsh-image-vision: settings section for the DSH-vision plugin (added by DSH-vision installer)`r`n`t`"dsh-image-vision`""
 [System.IO.File]::WriteAllText($file, $content.Replace($anchor, $insert), $utf8)
 Write-Host "补丁完成：$file"
 Write-Host '请重启 DSH 后，在「设置 → 图片理解」查看配置。'

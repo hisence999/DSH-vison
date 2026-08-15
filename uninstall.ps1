@@ -1,7 +1,7 @@
 # DSH Vision 卸载脚本（Windows PowerShell）
 # 用法（一行命令）：
 #   powershell -ExecutionPolicy Bypass -File uninstall.ps1
-#   （或：irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.ps1 | iex）
+#   （或：irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.ps1 | iex）
 #
 # 卸载内容：
 #   1) 删除 $DSH_HOME/profiles/node_modules/dsh-image-vision/（插件包）

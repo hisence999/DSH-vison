@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # DSH Vision one-line installer (Linux / macOS)
 # Usage (one line):
-#   curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.sh | bash
 #
 # Installs:
 #   1) apiproxy allowlist patch (required for the settings page)
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 DSH_HOME_DIR="${DSH_HOME:-$HOME/.dsh}"
-BASE="https://raw.githubusercontent.com/hisence999/DSH-vison/main"
+BASE="https://raw.githubusercontent.com/hisence999/DSH-vision/main"
 
 # ---------- 1) apiproxy allowlist patch (idempotent) ----------
 find_apiproxy_file() {
@@ -55,7 +55,7 @@ patch_apiproxy() {
   awk '
     /"web-search-deepseek"/ && !done {
       print "\t" $0 ","
-      print "\t// dsh-image-vision: settings section for the DSH-vison plugin (added by DSH-vison installer)"
+      print "\t// dsh-image-vision: settings section for the DSH-vision plugin (added by DSH-vision installer)"
       print "\t\"dsh-image-vision\""
       done = 1
       next

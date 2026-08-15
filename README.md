@@ -28,13 +28,13 @@
 Windows（PowerShell 一行）：
 
 ```powershell
-irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.ps1 | iex
 ```
 
 Linux / macOS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/install.sh | bash
 ```
 
 安装脚本会做三件事：
@@ -73,13 +73,13 @@ DSH 的设置页只向客户端暴露一个**写死的命名空间白名单**（
 Windows（PowerShell 一行）：
 
 ```powershell
-irm https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.ps1 | iex
 ```
 
 Linux / macOS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vison/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hisence999/DSH-vision/main/uninstall.sh | bash
 ```
 
 卸载脚本会删除插件包、移除 `cordis.patch.yml` 里的 `image-vision` 行、还原 apiproxy 白名单补丁（幂等，可重复执行）。`settings.yaml` 里的配置默认保留（重装后自动恢复），如需一并清理加 `-PurgeConfig`（Windows）或 `--purge-config`（Unix）。**卸载后需重启 DSH。**
