@@ -67,6 +67,11 @@ if [ -d "$DSH_HOME_DIR/profiles" ]; then
     if grep -q 'image-vision' "$patch_file"; then
       if command -v perl >/dev/null 2>&1; then
         perl -0pi -e 's/^[ \t]*# dsh-image-vision: give text-only models image understanding[^\r\n]*\r?\n[ \t]*- insert:\r?\n[ \t]*- id: image-vision\r?\n[ \t]*name: dsh-image-vision\r?\n[ \t]*config:\r?\n[ \t]*enabled: true\r?\n[ \t]*patchAdmission: true\r?\n//mg' "$patch_file"
+        # If nothing but comments/blank lines remain (the installer had replaced
+        # the empty-list root `[]`), restore `[]` so the file is a valid document.
+        if ! grep -qE '^[[:space:]]*[^#[:space:]]' "$patch_file"; then
+          printf '\n[]\n' >> "$patch_file"
+        fi
         echo "  OK  removed image-vision row: $patch_file"
       else
         echo "  !!  perl not found; remove the image-vision block from $patch_file manually"

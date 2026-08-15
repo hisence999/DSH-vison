@@ -95,7 +95,13 @@ if (Test-Path -LiteralPath $profiles) {
         if ($text -match '(?m)^\s*- id: image-vision\s*$') {
             Write-Host "  OK  已存在：$($patchFile.FullName)"
         } else {
-            $text = $text.TrimEnd() + "`r`n" + $patchRow + "`r`n"
+            # 全新 DSH 的 cordis.patch.yml 根是空列表 `[]`：它是一份完整 YAML 文档，
+            # 直接在其后追加条目会导致解析失败。此时把 `[]` 行替换为条目块。
+            if ($text -match '(?m)^[ \t]*\[\][ \t]*(\r?\n|$)') {
+                $text = [regex]::Replace($text, '(?m)^[ \t]*\[\][ \t]*(\r?\n|$)', $patchRow + "`r`n")
+            } else {
+                $text = $text.TrimEnd() + "`r`n" + $patchRow + "`r`n"
+            }
             [System.IO.File]::WriteAllText($patchFile.FullName, $text, (New-Object System.Text.UTF8Encoding($false)))
             Write-Host "  OK  已写入：$($patchFile.FullName)"
         }

@@ -96,7 +96,21 @@ if [ -d "$DSH_HOME_DIR/profiles" ]; then
     if grep -qE '^[[:space:]]*- id: image-vision[[:space:]]*$' "$patch_file"; then
       echo "  OK  already present: $patch_file"
     else
-      printf '\n%s\n' "$PATCH_ROW" >> "$patch_file"
+      # A fresh DSH cordis.patch.yml has an empty-list root `[]` — a complete YAML
+      # document, so appending after it is a parse error. Replace the `[]` line
+      # with the entry block instead.
+      BLOCK='# dsh-image-vision: give text-only models image understanding (auto-describes images).
+- insert:
+    - id: image-vision
+      name: dsh-image-vision
+      config:
+        enabled: true
+        patchAdmission: true'
+      if grep -qE '^[[:space:]]*\[\][[:space:]]*$' "$patch_file"; then
+        awk -v block="$BLOCK" '/^[[:space:]]*\[\][[:space:]]*$/ && !done { print block; done = 1; next } { print }' "$patch_file" > "$patch_file.tmp" && mv "$patch_file.tmp" "$patch_file"
+      else
+        printf '\n%s\n' "$PATCH_ROW" >> "$patch_file"
+      fi
       echo "  OK  written: $patch_file"
     fi
     PATCHED=1

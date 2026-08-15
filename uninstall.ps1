@@ -81,7 +81,14 @@ if (Test-Path -LiteralPath $profiles) {
         $pattern = '(?m)^[ \t]*# dsh-image-vision: give text-only models image understanding[^\r\n]*\r?\n[ \t]*- insert:\r?\n[ \t]*- id: image-vision\r?\n[ \t]*name: dsh-image-vision\r?\n[ \t]*config:\r?\n[ \t]*enabled: true\r?\n[ \t]*patchAdmission: true\r?\n'
         $next = [regex]::Replace($text, $pattern, '')
         if ($next -ne $text) {
-            $next = $next.TrimEnd() + "`r`n"
+            # 若移除后没有任何真正的 YAML 内容（只剩注释/空行）——说明安装时替换过
+            # 空列表根 `[]`——补回 `[]`，否则 patch 文件会成为空文档导致解析失败。
+            $contentOnly = ($next -split "`r?`n") | Where-Object { $_.Trim().Length -gt 0 -and -not $_.Trim().StartsWith('#') }
+            if (-not $contentOnly) {
+                $next = $next.TrimEnd() + "`r`n[]`r`n"
+            } else {
+                $next = $next.TrimEnd() + "`r`n"
+            }
             [System.IO.File]::WriteAllText($patchFile.FullName, $next, (New-Object System.Text.UTF8Encoding($false)))
             Write-Host "  OK  已移除 image-vision 行：$($patchFile.FullName)"
             $found = $true
